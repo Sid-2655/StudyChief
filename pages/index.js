@@ -1,48 +1,34 @@
 import { useState, useEffect } from 'react';
 
 export default function StudyChief() {
-  // Load tasks from localStorage or use default ones if none found
-  const [missions, setMissions] = useState(() => {
-    const savedMissions = localStorage.getItem('missions');
-    return savedMissions ? JSON.parse(savedMissions) : [
-      { task: 'Unit 1 – Session 1', duration: 10 },
-      { task: 'Unit 2 – Session 1', duration: 15 },
-      { task: 'Unit 3 – Session 1', duration: 20 },
-    ];
-  });
-
+  const [missions, setMissions] = useState([
+    { task: 'Unit 1 – Session 1', duration: 10 },
+    { task: 'Unit 2 – Session 1', duration: 15 },
+    { task: 'Unit 3 – Session 1', duration: 20 },
+  ]);
   const [activeIndex, setActiveIndex] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
-  // Update localStorage whenever missions are updated
+  // Client-side check to safely access localStorage
   useEffect(() => {
-    localStorage.setItem('missions', JSON.stringify(missions));
-  }, [missions]);
+    if (typeof window !== 'undefined') {
+      const savedMissions = localStorage.getItem('missions');
+      if (savedMissions) {
+        setMissions(JSON.parse(savedMissions));
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    let timer;
-    if (activeIndex !== null && timeLeft > 0) {
-      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0 && activeIndex !== null) {
-      setActiveIndex(null);
+    if (typeof window !== 'undefined') {
+      // Save updated missions to localStorage whenever missions change
+      localStorage.setItem('missions', JSON.stringify(missions));
     }
-    return () => clearInterval(timer);
-  }, [timeLeft, activeIndex]);
+  }, [missions]);
 
   const startTimer = (index) => {
     setActiveIndex(index);
-    setTimeLeft(missions[index].duration * 60); // convert minutes to seconds
-  };
-
-  const stopTimer = () => {
-    setActiveIndex(null);
-    setTimeLeft(0); // Stop the timer and reset it
-  };
-
-  const resetTimer = () => {
-    if (activeIndex !== null) {
-      setTimeLeft(missions[activeIndex].duration * 60); // Reset the time for the active task
-    }
+    setTimeLeft(missions[index].duration * 60);
   };
 
   const formatTime = (secs) => {
@@ -103,18 +89,6 @@ export default function StudyChief() {
                 }`}
               >
                 {activeIndex === idx ? 'Running...' : 'Start'}
-              </button>
-              <button
-                onClick={stopTimer}
-                className="ml-2 px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-400 transition-all"
-              >
-                Stop
-              </button>
-              <button
-                onClick={resetTimer}
-                className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all"
-              >
-                Reset
               </button>
               {activeIndex === idx && (
                 <span className="text-lg font-mono animate-pulse">⏱ {formatTime(timeLeft)}</span>
