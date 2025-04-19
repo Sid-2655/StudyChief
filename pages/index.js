@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 
 const initialMissions = [
-  { time: '06:00 – 07:30', task: 'Unit 1 – Session 1', duration: 90 },  // Duration in minutes
-  { time: '08:15 – 09:45', task: 'Unit 2 – Session 1', duration: 90 },
-  { time: '10:00 – 11:30', task: 'Unit 2 – Session 2', duration: 90 },
-  { time: '13:30 – 15:00', task: 'Unit 3 – Session 1', duration: 90 },
-  { time: '15:15 – 16:45', task: 'Unit 3 – Session 2', duration: 90 },
-  { time: '21:00 – 22:15', task: 'Unit 4 – Session', duration: 75 },
-  { time: '22:15 – 23:00', task: 'Unit 5 – Session', duration: 45 },
+  { time: '06:00 – 07:30', task: 'Unit 1 – Session 1', duration: 8 },  // Duration in minutes (8 minutes for testing)
+  { time: '08:15 – 09:45', task: 'Unit 2 – Session 1', duration: 9 },
+  { time: '10:00 – 11:30', task: 'Unit 2 – Session 2', duration: 9 },
+  { time: '13:30 – 15:00', task: 'Unit 3 – Session 1', duration: 9 },
+  { time: '15:15 – 16:45', task: 'Unit 3 – Session 2', duration: 9 },
+  { time: '21:00 – 22:15', task: 'Unit 4 – Session', duration: 7 },
+  { time: '22:15 – 23:00', task: 'Unit 5 – Session', duration: 7 },
 ];
 
 export default function StudyChief() {
@@ -26,14 +26,16 @@ export default function StudyChief() {
     return Array(missions.length).fill(false);
   });
   const [currentMission, setCurrentMission] = useState(null);
-  const [timer, setTimer] = useState(0);
+  const [timer, setTimer] = useState(null);
 
-  // Timer effect
   useEffect(() => {
     if (currentMission === null || completed.every(Boolean)) return;
 
-    // Set initial timer value based on the task's duration (in minutes)
-    setTimer(missions[currentMission].duration * 60);
+    const missionDurationInSeconds = missions[currentMission]?.duration * 60;
+
+    if (!missionDurationInSeconds) return;  // Prevent NaN if duration is missing or 0
+
+    setTimer(missionDurationInSeconds);
 
     const interval = setInterval(() => {
       setTimer((prevTimer) => {
