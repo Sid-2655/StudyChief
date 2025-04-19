@@ -1,29 +1,19 @@
 import { useState, useEffect } from 'react';
 
 export default function StudyChief() {
-  const [missions, setMissions] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('missions');
-      return saved ? JSON.parse(saved) : [
-        { task: 'Unit 1 – Session 1', duration: 10, completed: false }
-      ];
-    }
-    return [];
-  });
+  const [missions, setMissions] = useState([
+    { task: 'Unit 1 – Session 1', duration: 10 },
+    { task: 'Unit 2 – Session 1', duration: 15 },
+    { task: 'Unit 3 – Session 1', duration: 20 },
+  ]);
   const [activeIndex, setActiveIndex] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [totalCompletedTime, setTotalCompletedTime] = useState(0);
-
-  useEffect(() => {
-    localStorage.setItem('missions', JSON.stringify(missions));
-  }, [missions]);
 
   useEffect(() => {
     let timer;
     if (activeIndex !== null && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     } else if (timeLeft === 0 && activeIndex !== null) {
-      markCompleted(activeIndex);
       setActiveIndex(null);
     }
     return () => clearInterval(timer);
@@ -53,35 +43,7 @@ export default function StudyChief() {
   };
 
   const addMission = () => {
-    setMissions([...missions, { task: 'New Task', duration: 10, completed: false }]);
-  };
-
-  const markCompleted = (index) => {
-    const updated = [...missions];
-    if (!updated[index].completed) {
-      updated[index].completed = true;
-      setTotalCompletedTime((prev) => prev + updated[index].duration);
-    }
-    setMissions(updated);
-  };
-
-  const exportTasks = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(missions));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "missions.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  const importTasks = (e) => {
-    const fileReader = new FileReader();
-    fileReader.onload = () => {
-      const data = JSON.parse(fileReader.result);
-      setMissions(data);
-    };
-    fileReader.readAsText(e.target.files[0]);
+    setMissions([...missions, { task: 'New Task', duration: 10 }]);
   };
 
   return (
@@ -112,12 +74,14 @@ export default function StudyChief() {
             <div className="flex justify-between items-center pt-3">
               <button
                 onClick={() => startTimer(idx)}
-                disabled={activeIndex === idx || m.completed}
+                disabled={activeIndex === idx}
                 className={`px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
-                  m.completed ? 'bg-green-600 text-black cursor-not-allowed' : activeIndex === idx ? 'bg-yellow-700 text-black' : 'bg-yellow-400 text-black hover:bg-yellow-300'
+                  activeIndex === idx
+                    ? 'bg-yellow-700 text-black cursor-not-allowed'
+                    : 'bg-yellow-400 text-black hover:bg-yellow-300'
                 }`}
               >
-                {m.completed ? 'Done' : activeIndex === idx ? 'Running...' : 'Start'}
+                {activeIndex === idx ? 'Running...' : 'Start'}
               </button>
               {activeIndex === idx && (
                 <span className="text-lg font-mono animate-pulse">⏱ {formatTime(timeLeft)}</span>
@@ -127,32 +91,13 @@ export default function StudyChief() {
         ))}
       </div>
 
-      <div className="text-center pt-10 space-x-4">
+      <div className="text-center pt-10">
         <button
           onClick={addMission}
           className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-black font-bold rounded-xl transition-all duration-300 shadow-md shadow-yellow-800"
         >
           ➕ Add New Task
         </button>
-
-        <button
-          onClick={exportTasks}
-          className="px-6 py-3 bg-yellow-500 text-black rounded-xl font-bold hover:bg-yellow-400 transition"
-        >
-          📤 Export
-        </button>
-
-        <label className="cursor-pointer inline-block px-6 py-3 bg-yellow-500 text-black rounded-xl font-bold hover:bg-yellow-400 transition">
-          📥 Import
-          <input type="file" onChange={importTasks} className="hidden" />
-        </label>
-      </div>
-
-      <div className="mt-12 max-w-xl mx-auto bg-yellow-900/20 p-4 rounded-xl border border-yellow-700 text-center">
-        <h2 className="text-xl font-bold mb-2">📊 Daily Summary</h2>
-        <p>Total Tasks: {missions.length}</p>
-        <p>Completed: {missions.filter(m => m.completed).length}</p>
-        <p>Time Studied: {totalCompletedTime} minutes</p>
       </div>
     </div>
   );
