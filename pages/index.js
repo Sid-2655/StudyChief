@@ -8,9 +8,7 @@ export default function StudyChief() {
   ]);
   const [activeIndex, setActiveIndex] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [intervalId, setIntervalId] = useState(null);
 
-  // Client-side check to safely access localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedMissions = localStorage.getItem('missions');
@@ -22,30 +20,28 @@ export default function StudyChief() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Save updated missions to localStorage whenever missions change
       localStorage.setItem('missions', JSON.stringify(missions));
     }
   }, [missions]);
 
+  useEffect(() => {
+    let timer;
+    if (activeIndex !== null && timeLeft > 0) {
+      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    } else if (timeLeft === 0 && activeIndex !== null) {
+      setActiveIndex(null);
+    }
+    return () => clearInterval(timer);
+  }, [timeLeft, activeIndex]);
+
   const startTimer = (index) => {
     setActiveIndex(index);
     setTimeLeft(missions[index].duration * 60);
-    const id = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev === 1) {
-          clearInterval(id);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    setIntervalId(id);
   };
 
   const stopTimer = () => {
-    clearInterval(intervalId);
-    setIntervalId(null);
     setActiveIndex(null);
+    setTimeLeft(0);
   };
 
   const resetTimer = () => {
@@ -104,34 +100,33 @@ export default function StudyChief() {
             <div className="flex justify-between items-center pt-3">
               <button
                 onClick={() => startTimer(idx)}
-                disabled={activeIndex === idx || timeLeft === 0}
+                disabled={activeIndex === idx}
                 className={`px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
                   activeIndex === idx
                     ? 'bg-yellow-700 text-black cursor-not-allowed'
                     : 'bg-yellow-400 text-black hover:bg-yellow-300'
                 }`}
               >
-                {activeIndex === idx && timeLeft !== 0 ? 'Running...' : 'Start'}
+                {activeIndex === idx ? 'Running...' : 'Start'}
               </button>
-
               {activeIndex === idx && (
-                <>
-                  <span className="text-lg font-mono animate-pulse">⏱ {formatTime(timeLeft)}</span>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={stopTimer}
-                      className="px-4 py-2 rounded-full bg-yellow-600 text-black hover:bg-yellow-500 transition-all"
-                    >
-                      Stop
-                    </button>
-                    <button
-                      onClick={resetTimer}
-                      className="px-4 py-2 rounded-full bg-yellow-500 text-black hover:bg-yellow-400 transition-all"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </>
+                <span className="text-lg font-mono animate-pulse">⏱ {formatTime(timeLeft)}</span>
+              )}
+              {activeIndex === idx && (
+                <button
+                  onClick={stopTimer}
+                  className="ml-2 px-4 py-2 rounded-full font-semibold bg-red-600 text-white hover:bg-red-500"
+                >
+                  Stop
+                </button>
+              )}
+              {activeIndex === idx && (
+                <button
+                  onClick={resetTimer}
+                  className="ml-2 px-4 py-2 rounded-full font-semibold bg-blue-600 text-white hover:bg-blue-500"
+                >
+                  Reset
+                </button>
               )}
             </div>
           </div>
