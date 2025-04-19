@@ -8,6 +8,7 @@ export default function StudyChief() {
   ]);
   const [activeIndex, setActiveIndex] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [intervalId, setIntervalId] = useState(null);
 
   // Client-side check to safely access localStorage
   useEffect(() => {
@@ -29,6 +30,28 @@ export default function StudyChief() {
   const startTimer = (index) => {
     setActiveIndex(index);
     setTimeLeft(missions[index].duration * 60);
+    const id = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === 1) {
+          clearInterval(id);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    setIntervalId(id);
+  };
+
+  const stopTimer = () => {
+    clearInterval(intervalId);
+    setIntervalId(null);
+    setActiveIndex(null);
+  };
+
+  const resetTimer = () => {
+    if (activeIndex !== null) {
+      setTimeLeft(missions[activeIndex].duration * 60);
+    }
   };
 
   const formatTime = (secs) => {
@@ -81,17 +104,34 @@ export default function StudyChief() {
             <div className="flex justify-between items-center pt-3">
               <button
                 onClick={() => startTimer(idx)}
-                disabled={activeIndex === idx}
+                disabled={activeIndex === idx || timeLeft === 0}
                 className={`px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
                   activeIndex === idx
                     ? 'bg-yellow-700 text-black cursor-not-allowed'
                     : 'bg-yellow-400 text-black hover:bg-yellow-300'
                 }`}
               >
-                {activeIndex === idx ? 'Running...' : 'Start'}
+                {activeIndex === idx && timeLeft !== 0 ? 'Running...' : 'Start'}
               </button>
+
               {activeIndex === idx && (
-                <span className="text-lg font-mono animate-pulse">⏱ {formatTime(timeLeft)}</span>
+                <>
+                  <span className="text-lg font-mono animate-pulse">⏱ {formatTime(timeLeft)}</span>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={stopTimer}
+                      className="px-4 py-2 rounded-full bg-yellow-600 text-black hover:bg-yellow-500 transition-all"
+                    >
+                      Stop
+                    </button>
+                    <button
+                      onClick={resetTimer}
+                      className="px-4 py-2 rounded-full bg-yellow-500 text-black hover:bg-yellow-400 transition-all"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
