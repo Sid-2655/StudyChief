@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 export default function StudyChief() {
   const [missions, setMissions] = useState([
-    { task: 'Unit 1 – Session 1', duration: 10 }, // duration in minutes
+    { task: 'Unit 1 – Session 1', duration: 10 },
     { task: 'Unit 2 – Session 1', duration: 15 },
     { task: 'Unit 3 – Session 1', duration: 20 },
   ]);
@@ -45,9 +45,14 @@ export default function StudyChief() {
     return `${m}:${s}`;
   };
 
+  const addMission = () => {
+    setMissions([...missions, { task: 'New Task', duration: 10 }]);
+  };
+
   return (
     <div className="min-h-screen bg-black text-white p-4 space-y-4">
       <h1 className="text-3xl font-bold text-center mb-6">StudyChief: Editable Missions</h1>
+
       {missions.map((m, idx) => (
         <div key={idx} className="p-4 border rounded-xl border-gray-600 space-y-2">
           <input
@@ -75,6 +80,15 @@ export default function StudyChief() {
           </div>
         </div>
       ))}
+
+      <div className="text-center pt-4">
+        <button
+          onClick={addMission}
+          className="px-6 py-2 bg-blue-600 rounded-xl text-white hover:bg-blue-700"
+        >
+          ➕ Add Task
+        </button>
+      </div>
     </div>
   );
 }
