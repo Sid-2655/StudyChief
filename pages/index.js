@@ -13,8 +13,12 @@ const initialMissions = [
 export default function StudyChief() {
   const [missions, setMissions] = useState(initialMissions);
   const [completed, setCompleted] = useState(() => {
-    const saved = localStorage.getItem('missions');
-    return saved ? JSON.parse(saved) : Array(missions.length).fill(false);
+    // Only use localStorage on the client side
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('missions');
+      return saved ? JSON.parse(saved) : Array(missions.length).fill(false);
+    }
+    return Array(missions.length).fill(false);
   });
   const [currentMission, setCurrentMission] = useState(0);
   const [timer, setTimer] = useState(missions[currentMission].duration * 60);
@@ -39,7 +43,9 @@ export default function StudyChief() {
 
   // Update local storage when completed status changes
   useEffect(() => {
-    localStorage.setItem('missions', JSON.stringify(completed));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('missions', JSON.stringify(completed));
+    }
   }, [completed]);
 
   const handleComplete = (index) => {
