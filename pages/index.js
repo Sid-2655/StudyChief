@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 
 export default function StudyChief() {
-  const [missions, setMissions] = useState([
-    { task: 'Unit 1 – Session 1', duration: 10 },
-    { task: 'Unit 2 – Session 1', duration: 15 },
-    { task: 'Unit 3 – Session 1', duration: 20 },
-  ]);
+  
   const [activeIndex, setActiveIndex] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
