@@ -11,21 +11,27 @@ const initialMissions = [
 ];
 
 export default function StudyChief() {
-  const [missions, setMissions] = useState(initialMissions);
-  const [completed, setCompleted] = useState(() => {
+  const [missions, setMissions] = useState(() => {
     // Only use localStorage on the client side
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('missions');
+      return saved ? JSON.parse(saved) : initialMissions;
+    }
+    return initialMissions;
+  });
+  const [completed, setCompleted] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('completed');
       return saved ? JSON.parse(saved) : Array(missions.length).fill(false);
     }
     return Array(missions.length).fill(false);
   });
-  const [currentMission, setCurrentMission] = useState(0);
-  const [timer, setTimer] = useState(missions[currentMission].duration * 60);
-  
+  const [currentMission, setCurrentMission] = useState(null);
+  const [timer, setTimer] = useState(0);
+
   // Timer effect
   useEffect(() => {
-    if (completed.every(Boolean)) return; // Don't run if all missions are completed
+    if (currentMission === null || completed.every(Boolean)) return; // Don't run if no mission is active or all missions are completed
 
     const interval = setInterval(() => {
       setTimer((prevTimer) => {
@@ -38,15 +44,16 @@ export default function StudyChief() {
       });
     }, 1000);
 
-    return () => clearInterval(interval);  // Cleanup on unmount or change of mission
-  }, [completed, currentMission]);
+    return () => clearInterval(interval); // Cleanup on unmount or change of mission
+  }, [currentMission, completed]);
 
-  // Update local storage when completed status changes
+  // Save data to localStorage whenever there's a change
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('missions', JSON.stringify(completed));
+      localStorage.setItem('missions', JSON.stringify(missions));
+      localStorage.setItem('completed', JSON.stringify(completed));
     }
-  }, [completed]);
+  }, [missions, completed]);
 
   const handleComplete = (index) => {
     const updated = [...completed];
@@ -63,7 +70,7 @@ export default function StudyChief() {
 
   const handleStartNewMission = (index) => {
     setCurrentMission(index);
-    setTimer(missions[index].duration * 60);  // Set new timer based on mission's duration
+    setTimer(missions[index].duration * 60); // Set new timer based on mission's duration
   };
 
   const formatTime = (timeInSeconds) => {
@@ -78,7 +85,10 @@ export default function StudyChief() {
 
       <div className="space-y-4">
         {missions.map((m, idx) => (
-          <div key={idx} className={`p-4 border rounded-xl ${completed[idx] ? 'border-green-500 bg-green-900/20' : 'border-gray-600'}`}>
+          <div
+            key={idx}
+            className={`p-4 border rounded-xl ${completed[idx] ? 'border-green-500 bg-green-900/20' : 'border-gray-600'}`}
+          >
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">
@@ -109,7 +119,9 @@ export default function StudyChief() {
                 )}
               </div>
             </div>
-            <p className="text-sm">Time left: {formatTime(timer)}</p>
+            {currentMission === idx && (
+              <p className="text-sm">Time left: {formatTime(timer)}</p>
+            )}
           </div>
         ))}
       </div>
