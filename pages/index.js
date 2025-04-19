@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const initialMissions = [
-  { time: '06:00 – 07:30', task: 'Unit 1 – Session 1', duration: 90 },
+  { time: '06:00 – 07:30', task: 'Unit 1 – Session 1', duration: 90 },  // Duration in minutes
   { time: '08:15 – 09:45', task: 'Unit 2 – Session 1', duration: 90 },
   { time: '10:00 – 11:30', task: 'Unit 2 – Session 2', duration: 90 },
   { time: '13:30 – 15:00', task: 'Unit 3 – Session 1', duration: 90 },
@@ -12,7 +12,6 @@ const initialMissions = [
 
 export default function StudyChief() {
   const [missions, setMissions] = useState(() => {
-    // Only use localStorage on the client side
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('missions');
       return saved ? JSON.parse(saved) : initialMissions;
@@ -31,13 +30,16 @@ export default function StudyChief() {
 
   // Timer effect
   useEffect(() => {
-    if (currentMission === null || completed.every(Boolean)) return; // Don't run if no mission is active or all missions are completed
+    if (currentMission === null || completed.every(Boolean)) return;
+
+    // Set initial timer value based on the task's duration (in minutes)
+    setTimer(missions[currentMission].duration * 60);
 
     const interval = setInterval(() => {
       setTimer((prevTimer) => {
         if (prevTimer <= 0) {
           clearInterval(interval);
-          handleComplete(currentMission);  // Automatically mark current task as completed when timer ends
+          handleComplete(currentMission);
           return 0;
         }
         return prevTimer - 1;
@@ -47,7 +49,6 @@ export default function StudyChief() {
     return () => clearInterval(interval); // Cleanup on unmount or change of mission
   }, [currentMission, completed]);
 
-  // Save data to localStorage whenever there's a change
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('missions', JSON.stringify(missions));
@@ -57,7 +58,7 @@ export default function StudyChief() {
 
   const handleComplete = (index) => {
     const updated = [...completed];
-    updated[index] = !updated[index];
+    updated[index] = true;
     setCompleted(updated);
   };
 
