@@ -18,7 +18,6 @@ export default function StudyChief() {
     } else if (timeLeft === 0 && activeIndex !== null) {
       setActiveIndex(null);
     }
-
     return () => clearInterval(timer);
   }, [timeLeft, activeIndex]);
 
@@ -50,41 +49,52 @@ export default function StudyChief() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 space-y-4">
-      <h1 className="text-3xl font-bold text-center mb-6">StudyChief: Editable Missions</h1>
+    <div className="min-h-screen bg-black text-yellow-300 p-4 space-y-4 font-mono">
+      <h1 className="text-4xl font-extrabold text-center mb-6 text-yellow-400 tracking-wider">
+        🚀 StudyChief: Mission Control
+      </h1>
 
       {missions.map((m, idx) => (
-        <div key={idx} className="p-4 border rounded-xl border-gray-600 space-y-2">
+        <div
+          key={idx}
+          className="p-4 rounded-xl border border-yellow-500 bg-black/40 shadow-md shadow-yellow-800 space-y-3"
+        >
           <input
             value={m.task}
             onChange={(e) => handleTaskChange(idx, e.target.value)}
-            className="w-full bg-transparent text-white text-xl font-semibold"
+            className="w-full bg-transparent border-b border-yellow-400 focus:outline-none text-xl placeholder-yellow-500"
+            placeholder="Task Name"
           />
           <input
             type="number"
             value={m.duration}
             onChange={(e) => handleDurationChange(idx, e.target.value)}
-            className="w-full bg-transparent text-white text-sm"
+            className="w-full bg-transparent border-b border-yellow-400 focus:outline-none text-sm mt-1 placeholder-yellow-500"
+            placeholder="Duration (min)"
           />
-          <div className="flex justify-between items-center mt-2">
+          <div className="flex justify-between items-center mt-3">
             <button
               onClick={() => startTimer(idx)}
-              className="px-4 py-2 bg-gray-700 rounded"
               disabled={activeIndex === idx}
+              className={`px-4 py-2 rounded-lg transition-all duration-300 font-bold ${
+                activeIndex === idx
+                  ? 'bg-yellow-700 text-black'
+                  : 'bg-yellow-500 text-black hover:bg-yellow-400'
+              }`}
             >
               {activeIndex === idx ? 'Running...' : 'Start'}
             </button>
             {activeIndex === idx && (
-              <span className="text-lg font-mono">⏱️ {formatTime(timeLeft)}</span>
+              <span className="text-xl animate-pulse">⏱️ {formatTime(timeLeft)}</span>
             )}
           </div>
         </div>
       ))}
 
-      <div className="text-center pt-4">
+      <div className="text-center pt-6">
         <button
           onClick={addMission}
-          className="px-6 py-2 bg-blue-600 rounded-xl text-white hover:bg-blue-700"
+          className="px-6 py-2 bg-yellow-400 text-black font-bold rounded-full hover:bg-yellow-300 transition-all duration-300 shadow-md"
         >
           ➕ Add Task
         </button>
