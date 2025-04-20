@@ -11,7 +11,7 @@
  "dependencies": {
   "react-icons": "^4.12.0",
   "framer-motion": "^10.16.4",
-  // ... other existing dependencies
+  
 }
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
