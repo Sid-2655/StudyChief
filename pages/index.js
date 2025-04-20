@@ -1,223 +1,280 @@
-import { useState, useEffect, useRef } from 'react';
-import { FiPlay, FiPause, FiRefreshCw, FiTrash2, FiCheck, FiPlus, FiSettings, FiVolume2, FiVolumeX, FiMoon, FiSun } from 'react-icons/fi';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { FiPlay, FiPause, FiRefreshCw, FiTrash2, FiCheck, FiPlus, FiVolume2, FiVolumeX, FiMoon, FiSun } from 'react-icons/fi';
 import { FaFire, FaMedal, FaChartLine } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// SSR-safe initialization helper
+const initializeState = (key, defaultValue) => {
+  if (typeof window === 'undefined') return defaultValue;
+  const saved = localStorage.getItem(key);
+  return saved ? JSON.parse(saved) : defaultValue;
+};
+
+const MissionCard = memo(({ 
+  mission, 
+  index, 
+  darkMode, 
+  isRunning, 
+  timeLeft, 
+  activeIndex,
+  onTaskChange,
+  onDurationChange,
+  onDelete,
+  onStart,
+  onPause,
+  onReset,
+  onStop
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, x: -20 }}
+    className={`p-6 rounded-xl border transition-all duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-lg hover:shadow-xl`}
+  >
+    <div className="flex justify-between items-start">
+      <input
+        value={mission.task}
+        onChange={(e) => onTaskChange(index, e.target.value)}
+        className={`w-full text-lg font-medium focus:outline-none ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}
+      />
+      <button
+        onClick={() => onDelete(mission.id)}
+        className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+      >
+        <FiTrash2 className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+      </button>
+    </div>
+    
+    <div className="flex items-center mt-4 space-x-4">
+      <input
+        type="number"
+        value={mission.duration}
+        onChange={(e) => onDurationChange(index, e.target.value)}
+        className={`w-16 px-3 py-1 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+        min="1"
+        max="120"
+      />
+      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>minutes</span>
+    </div>
+
+    <div className="flex justify-between items-center mt-6">
+      {activeIndex === index ? (
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={isRunning ? onPause : () => onStart(index)}
+            className={`p-3 rounded-full ${isRunning ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}`}
+          >
+            {isRunning ? <FiPause size={18} /> : <FiPlay size={18} />}
+          </button>
+          <span className={`text-xl font-mono ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            {formatTime(timeLeft)}
+          </span>
+          <button
+            onClick={onReset}
+            className="p-3 rounded-full bg-blue-500 text-white"
+          >
+            <FiRefreshCw size={18} />
+          </button>
+          <button
+            onClick={onStop}
+            className="p-3 rounded-full bg-red-500 text-white"
+          >
+            <FiCheck size={18} />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => onStart(index)}
+          className={`px-5 py-2 rounded-lg font-medium ${darkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'} text-white transition-colors`}
+        >
+          Start Session
+        </button>
+      )}
+      {mission.completed && (
+        <span className={`px-3 py-1 rounded-full text-sm ${darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'}`}>
+          Completed
+        </span>
+      )}
+    </div>
+  </motion.div>
+));
+
+const formatTime = (secs) => {
+  const m = String(Math.floor(secs / 60)).padStart(2, '0');
+  const s = String(secs % 60).padStart(2, '0');
+  return `${m}:${s}`;
+};
+
 export default function StudyChiefPro() {
-  // Core State
-  const [missions, setMissions] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('missions');
-      return saved ? JSON.parse(saved) : [
-        { id: 1, task: 'Unit 1 – Session 1', duration: 25, completed: false },
-        { id: 2, task: 'Unit 2 – Session 1', duration: 15, completed: false },
-        { id: 3, task: 'Unit 3 – Session 1', duration: 30, completed: false },
-      ];
-    }
-    return [];
-  });
+  const [missions, setMissions] = useState(() => 
+    initializeState('missions', [
+      { id: 1, task: 'Unit 1 – Session 1', duration: 25, completed: false },
+      { id: 2, task: 'Unit 2 – Session 1', duration: 15, completed: false },
+      { id: 3, task: 'Unit 3 – Session 1', duration: 30, completed: false },
+    ])
+  );
 
   const [activeIndex, setActiveIndex] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [completedSessions, setCompletedSessions] = useState([]);
-  const [showSettings, setShowSettings] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [completedSessions, setCompletedSessions] = useState(() => 
+    initializeState('completedSessions', [])
+  );
+  const [darkMode, setDarkMode] = useState(() => 
+    initializeState('darkMode', true)
+  );
+  const [soundEnabled, setSoundEnabled] = useState(() => 
+    initializeState('soundEnabled', true)
+  );
   const [streak, setStreak] = useState(0);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const audioRef = useRef(null);
+  const activeMissionRef = useRef();
 
-  // Sound Effects
+  // Initialize audio and sync ref
   useEffect(() => {
     audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3');
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
+
+  // Sync ref with current mission
+  useEffect(() => {
+    activeMissionRef.current = missions[activeIndex]?.duration * 60 || 0;
+    if (activeIndex !== null) {
+      setTimeLeft(missions[activeIndex].duration * 60);
+    }
+  }, [missions, activeIndex]);
 
   // Persistence
   useEffect(() => {
     localStorage.setItem('missions', JSON.stringify(missions));
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
     localStorage.setItem('soundEnabled', JSON.stringify(soundEnabled));
-  }, [missions, darkMode, soundEnabled]);
+    localStorage.setItem('completedSessions', JSON.stringify(completedSessions));
+  }, [missions, darkMode, soundEnabled, completedSessions]);
 
-  // Timer Logic
+  // Timer logic
   useEffect(() => {
     let timer;
     if (isRunning && timeLeft > 0) {
       timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            completeMission(activeIndex);
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     } else if (timeLeft === 0 && isRunning) {
+      setIsRunning(false);
       if (soundEnabled && audioRef.current) {
         audioRef.current.play();
       }
-      setIsRunning(false);
-      if (activeIndex !== null) {
-        completeMission(activeIndex);
-      }
     }
     return () => clearInterval(timer);
-  }, [timeLeft, isRunning, activeIndex, soundEnabled]);
+  }, [isRunning, timeLeft, activeIndex, soundEnabled]);
 
-  // Streak Calculation
+  // Streak calculation
   useEffect(() => {
-    const today = new Date().toDateString();
-    const lastSession = completedSessions[completedSessions.length - 1]?.date;
-    if (lastSession === today) {
+    if (completedSessions.length === 0) return;
+    
+    const lastSessionDate = new Date(completedSessions[completedSessions.length - 1].date);
+    const today = new Date();
+    
+    const isSameDay = (d1, d2) => 
+      d1.getDate() === d2.getDate() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getFullYear() === d2.getFullYear();
+
+    const isConsecutiveDay = (d1, d2) => {
+      const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
+      return diff >= 1 && diff < 2;
+    };
+
+    if (isSameDay(lastSessionDate, today)) {
       setStreak(prev => prev + 1);
-    } else if (lastSession && new Date(lastSession).getDate() !== new Date(today).getDate() - 1) {
+    } else if (!isConsecutiveDay(lastSessionDate, today)) {
       setStreak(0);
     }
   }, [completedSessions]);
 
-  // Core Functions
-  const startTimer = (index) => {
-    setActiveIndex(index);
-    setTimeLeft(missions[index].duration * 60);
-    setIsRunning(true);
-  };
-
-  const pauseTimer = () => {
-    setIsRunning(false);
-  };
-
-  const stopTimer = () => {
-    setIsRunning(false);
-    setActiveIndex(null);
-    setTimeLeft(0);
-  };
-
-  const resetTimer = () => {
-    if (activeIndex !== null) {
-      setTimeLeft(missions[activeIndex].duration * 60);
-    }
-  };
-
-  const completeMission = (index) => {
-    const updated = [...missions];
-    updated[index].completed = true;
-    setMissions(updated);
+  const completeMission = useCallback((index) => {
+    if (index === null || index >= missions.length) return;
+    
+    setMissions(prev => prev.map((m, i) => 
+      i === index ? {...m, completed: true} : m
+    ));
+    
     setCompletedSessions(prev => [...prev, {
       task: missions[index].task,
       duration: missions[index].duration,
       date: new Date().toISOString()
     }]);
+    
     setActiveIndex(null);
-  };
+    setIsRunning(false);
+  }, [missions]);
 
-  const addMission = () => {
+  const startTimer = useCallback((index) => {
+    setActiveIndex(index);
+    setTimeLeft(missions[index].duration * 60);
+    setIsRunning(true);
+  }, [missions]);
+
+  const pauseTimer = useCallback(() => {
+    setIsRunning(false);
+  }, []);
+
+  const stopTimer = useCallback(() => {
+    setIsRunning(false);
+    setActiveIndex(null);
+    setTimeLeft(0);
+  }, []);
+
+  const resetTimer = useCallback(() => {
+    if (activeIndex !== null) {
+      setTimeLeft(missions[activeIndex].duration * 60);
+    }
+  }, [activeIndex, missions]);
+
+  const addMission = useCallback(() => {
     const newId = missions.length > 0 ? Math.max(...missions.map(m => m.id)) + 1 : 1;
-    setMissions([...missions, { id: newId, task: 'New Task', duration: 25, completed: false }]);
-  };
+    setMissions(prev => [...prev, { id: newId, task: 'New Task', duration: 25, completed: false }]);
+  }, [missions]);
 
-  const deleteMission = (id) => {
-    setMissions(missions.filter(mission => mission.id !== id));
+  const deleteMission = useCallback((id) => {
+    setMissions(prev => prev.filter(mission => mission.id !== id));
     if (activeIndex !== null && missions[activeIndex].id === id) {
       stopTimer();
     }
-  };
+  }, [activeIndex, missions, stopTimer]);
 
-  const formatTime = (secs) => {
-    const m = String(Math.floor(secs / 60)).padStart(2, '0');
-    const s = String(secs % 60).padStart(2, '0');
-    return `${m}:${s}`;
-  };
+  const handleTaskChange = useCallback((index, value) => {
+    setMissions(prev => prev.map((m, i) => 
+      i === index ? {...m, task: value} : m
+    ));
+  }, []);
 
-  const calculateTotalStudyTime = () => {
+  const handleDurationChange = useCallback((index, value) => {
+    const numValue = Math.min(120, Math.max(1, parseInt(value) || 1));
+    setMissions(prev => prev.map((m, i) => 
+      i === index ? {...m, duration: numValue} : m
+    ));
+  }, []);
+
+  const calculateTotalStudyTime = useCallback(() => {
     return completedSessions.reduce((total, session) => total + session.duration, 0);
-  };
-
-  // UI Components
-  const MissionCard = ({ mission, index }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className={`p-6 rounded-xl border transition-all duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-lg hover:shadow-xl`}
-    >
-      <div className="flex justify-between items-start">
-        <input
-          value={mission.task}
-          onChange={(e) => {
-            const updated = [...missions];
-            updated[index].task = e.target.value;
-            setMissions(updated);
-          }}
-          className={`w-full text-lg font-medium focus:outline-none ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}
-        />
-        <button
-          onClick={() => deleteMission(mission.id)}
-          className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-        >
-          <FiTrash2 className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
-        </button>
-      </div>
-      
-      <div className="flex items-center mt-4 space-x-4">
-        <input
-          type="number"
-          value={mission.duration}
-          onChange={(e) => {
-            const value = parseInt(e.target.value) || 0;
-            if (value > 0 && value <= 120) {
-              const updated = [...missions];
-              updated[index].duration = value;
-              setMissions(updated);
-            }
-          }}
-          className={`w-16 px-3 py-1 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
-          min="1"
-          max="120"
-        />
-        <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>minutes</span>
-      </div>
-
-      <div className="flex justify-between items-center mt-6">
-        {activeIndex === index ? (
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={isRunning ? pauseTimer : () => setIsRunning(true)}
-              className={`p-3 rounded-full ${isRunning ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}`}
-            >
-              {isRunning ? <FiPause size={18} /> : <FiPlay size={18} />}
-            </button>
-            <span className={`text-xl font-mono ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              {formatTime(timeLeft)}
-            </span>
-            <button
-              onClick={resetTimer}
-              className="p-3 rounded-full bg-blue-500 text-white"
-            >
-              <FiRefreshCw size={18} />
-            </button>
-            <button
-              onClick={stopTimer}
-              className="p-3 rounded-full bg-red-500 text-white"
-            >
-              <FiCheck size={18} />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => startTimer(index)}
-            className={`px-5 py-2 rounded-lg font-medium ${darkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'} text-white transition-colors`}
-          >
-            Start Session
-          </button>
-        )}
-        {mission.completed && (
-          <span className={`px-3 py-1 rounded-full text-sm ${darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'}`}>
-            Completed
-          </span>
-        )}
-      </div>
-    </motion.div>
-  );
+  }, [completedSessions]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="container mx-auto px-4 py-12">
-        {/* Header */}
         <header className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
@@ -261,7 +318,6 @@ export default function StudyChiefPro() {
           </div>
         </header>
 
-        {/* Stats Bar */}
         <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md grid grid-cols-1 md:grid-cols-3 gap-6`}>
           <div className="flex items-center space-x-4">
             <div className={`p-4 rounded-full ${darkMode ? 'bg-indigo-900' : 'bg-indigo-100'}`}>
@@ -294,7 +350,6 @@ export default function StudyChiefPro() {
           </div>
         </div>
 
-        {/* Analytics Panel */}
         {showAnalytics && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -316,7 +371,6 @@ export default function StudyChiefPro() {
                     ))}
                   </ul>
                 </div>
-                {/* More analytics can be added here */}
               </div>
             ) : (
               <p className={`py-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Complete your first session to see analytics</p>
@@ -324,7 +378,6 @@ export default function StudyChiefPro() {
           </motion.div>
         )}
 
-        {/* Missions List */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Your Study Missions</h2>
@@ -341,7 +394,22 @@ export default function StudyChiefPro() {
             {missions.length > 0 ? (
               <div className="grid gap-6">
                 {missions.map((mission, index) => (
-                  <MissionCard key={mission.id} mission={mission} index={index} />
+                  <MissionCard
+                    key={mission.id}
+                    mission={mission}
+                    index={index}
+                    darkMode={darkMode}
+                    isRunning={isRunning}
+                    timeLeft={timeLeft}
+                    activeIndex={activeIndex}
+                    onTaskChange={handleTaskChange}
+                    onDurationChange={handleDurationChange}
+                    onDelete={deleteMission}
+                    onStart={startTimer}
+                    onPause={pauseTimer}
+                    onReset={resetTimer}
+                    onStop={stopTimer}
+                  />
                 ))}
               </div>
             ) : (
@@ -356,10 +424,9 @@ export default function StudyChiefPro() {
           </AnimatePresence>
         </div>
 
-        {/* Footer */}
         <footer className={`mt-12 pt-6 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'} text-center`}>
           <p className={darkMode ? 'text-gray-500' : 'text-gray-600'}>
-            StudyChief Pro © {new Date().getFullYear()} • Built with ❤️ for productive minds
+            StudyChief Pro © {new Date().getFullYear()}
           </p>
         </footer>
       </div>
